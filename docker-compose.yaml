@@ -1,0 +1,18 @@
+version: '3'
+services:
+  nginx-jwt-auth:
+    # networks:
+    #  - nginx-jwt-auth_network
+    #image: ovidiubuligan/nginx-jwt-auth:sha-da504a9
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    command: "--insecure --insecure-addr=0.0.0.0:8888 --config /jwt-config/config.yaml"
+    environment:
+    - SAMPLE_ENV_VAR=sampleValue 
+
+    ports:
+     - "8888:8888"
+    volumes:
+     - ./config.yaml/:/jwt-config/config.yaml
+    # - ./:c:/mnt/my_container_dir

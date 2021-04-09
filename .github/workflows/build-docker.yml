@@ -1,5 +1,8 @@
 name: Build Docker image
-on: [release, pull_request]
+on: 
+  release: 
+    types:
+      - published
 jobs:
   build:
     name: Build Docker

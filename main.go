@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
 	"time"
 
@@ -285,7 +286,7 @@ func (s *server) queryStringClaimValidator(claims jwt.MapClaims, r *http.Request
 	passedValidation := true
 	for claimName, validValues := range validClaims {
 		claimObj := claims[strings.TrimPrefix(claimName, "claims_")]
-
+		
 		switch claimVal := claimObj.(type) {
 			case string:
 				if  !contains(validValues, claimVal) {
@@ -304,6 +305,7 @@ func (s *server) queryStringClaimValidator(claims jwt.MapClaims, r *http.Request
 				}
 			default:
 				fmt.Errorf("I don't know how to handle claim object %T\n", claimObj)
+				passedValidation = false;
 		}
 
 	}
@@ -315,8 +317,13 @@ func (s *server) queryStringClaimValidator(claims jwt.MapClaims, r *http.Request
 }
 
 func contains(haystack []string, needle string) bool {
-	for _, v := range haystack {
-		if v == needle {
+	for _, validPattern := range haystack {
+		
+		matched,err := regexp.MatchString(validPattern, needle)
+		if err != nil {
+			fmt.Errorf("unable to compile pattern %v to match claim %v , error %v\n", validPattern,needle,err)
+		}
+		if matched {
 			return true
 		}
 	}

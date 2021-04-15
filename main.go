@@ -14,7 +14,6 @@ import (
 	"github.com/MicahParks/keyfunc"
 	"github.com/dgrijalva/jwt-go"
 	"github.com/dgrijalva/jwt-go/request"
-	"github.com/juliangruber/go-intersect"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -284,24 +283,35 @@ func (s *server) queryStringClaimValidator(claims jwt.MapClaims, r *http.Request
 	s.Logger.Debugw("Validating claims from query string", "validClaims", validClaims)
 
 	passedValidation := true
-	for claimName, validValues := range validClaims {
+	for claimName, validPatterns := range validClaims {
 		claimObj := claims[strings.TrimPrefix(claimName, "claims_")]
 		
 		switch claimVal := claimObj.(type) {
 			case string:
-				if  !contains(validValues, claimVal) {
+				if  !contains(validPatterns, claimVal) {
 					passedValidation = false
 				}
 			case []interface{}:
+				//short exit if there are restrictions on claim but no claims exist
+				if(len(claimVal) == 0 && len(validPatterns) > 0){
+					passedValidation = false
+				}
+				// fill an actualClaims[] from  interface[]
 				actualClaims := make([]string, len(claimVal))
 				for i, e := range claimVal {					
-					claim := e.(string)
-					actualClaims[i] = claim;
+				 	claim := e.(string)
+				 	actualClaims[i] = claim;
 				}
-				intersectResult :=intersect.Simple(validValues,actualClaims);
-				// all required scopes from the query string must match 
-				if len(intersectResult.([]interface{})) != len(validValues) {
+				for _,validPattern := range validPatterns{
 					passedValidation = false
+					out:
+					for _,actualClaim := range actualClaims{
+						if  contains( []string{validPattern}, actualClaim) {
+							passedValidation = true
+							break out;
+						}
+					}
+					if(!passedValidation) {break;}
 				}
 			default:
 				fmt.Errorf("I don't know how to handle claim object %T\n", claimObj)
